@@ -23,28 +23,27 @@ $db->exec("
     );"
 );
 
-$app->get('/', function () use ($app) {
-    $app->view()->appendData(array('name' => 'World'));
+$app->get('/', function () use ($app) { $app->redirect('/posts'); });
 
-    $app->render('hello.mustache');
+$app->get('/posts', function () use ($app) {
+ $app->view()->appendData(array('posts' => ORM::for_table('post')->find_many()));
+
+ $app->render('posts.mustache');
 });
 
-$app->get('/hello/:name', function ($name) use ($app) {
-    $app->view()->appendData(array('name' => $name));
-
-    $app->render('hello.mustache');
+$app->get('/addPost', function () use ($app) {
+ $app->render('addPost.mustache');
 });
 
-$app->post('/insertPost', function () use ($app) {
+$app->post('/addPost', function () use ($app) {
  $req = $app->request();
 
  $title = $req->post('title');
  $post = $req->post('post');
- $id = md5 ("$title $post");
 
  $new_post = ORM::for_table('post')->create();
  
- $new_post->id = $id;
+ $new_post->id = md5 ("$title $post");
  $new_post->title = $title;
  $new_post->post = $post;
  
@@ -53,28 +52,12 @@ $app->post('/insertPost', function () use ($app) {
  $app->redirect("/post/$id");
 });
 
-$app->get('/posts', function () use ($app) {
- $app->view()->appendData(array('posts' => ORM::for_table('post')->find_many()));
-
- $app->render('posts.mustache');
-});
-
 $app->get('/post/:id', function ($id) use ($app) {
- 
- $post = ORM::for_table('post')
-    ->where_equal('id', $id)
-    ->find_one();
 
- $app->view()->appendData(
- 		array('title' => $post->title, 'post' => $post->post)
- 	);
+ $app->view()->appendData(array('post' => ORM::for_table('post')->where_equal('id', $id)->find_one()));
 
  $app->render('post.mustache');
-});
-
-$app->get('/addPost', function () use ($app) {
- $app->render('addPost.mustache');
+ 
 });
 
 $app->run();
-
