@@ -1,0 +1,8 @@
+{
+    "require": {
+        "slim/slim": "2.*",
+        "j4mie/idiorm": "dev-master",
+        "slim/extras": "dev-master",
+        "mustache/mustache": "dev-dev"
+    }
+}
