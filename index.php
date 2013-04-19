@@ -1,63 +1,67 @@
  <?php
-require 'vendor/autoload.php';
+ require 'vendor/autoload.php';
 
-$mustache = new \Slim\Extras\Views\Mustache();
+ // Create a instance of the custom Mustache view and tell Slim where Mustache is installed
+ $mustache = new \Slim\Extras\Views\Mustache();
+ \Slim\Extras\Views\Mustache::$mustacheDirectory = 'vendor/mustache/mustache/src/Mustache/';
 
-\Slim\Extras\Views\Mustache::$mustacheDirectory = 'vendor/mustache/mustache/src/Mustache/';
-// During instantiation
-$app = new \Slim\Slim(array(
-	'mode' => 'development',
-	'debug' => true,
-	'templates.path' => './templates',
-	'view' => $mustache
-));
+ // Configure Slim
+ $app = new \Slim\Slim(array(
+   'mode' => 'development',
+   'debug' => true,
+   'templates.path' => './templates',
+   'view' => $mustache
+ ));
 
-ORM::configure('sqlite:./blog.db');
+ // Setup the ORM and make the post table if it doesn't already exist.
+ ORM::configure('sqlite:./blog.db');
 
-$db = ORM::get_db();
-$db->exec("
+ $db = ORM::get_db();
+ $db->exec("
     CREATE TABLE IF NOT EXISTS post (
     	id TEXT, 
         title TEXT, 
         post TEXT
-    );"
-);
+        );"
+ );
 
-$app->get('/', function () use ($app) { $app->redirect('/posts'); });
+ // Redirect anything at root to Posts
+ $app->get('/', function () use ($app) { $app->redirect('/posts'); });
 
-$app->get('/posts', function () use ($app) {
- $app->view()->appendData(array('posts' => ORM::for_table('post')->find_many()));
+ // Get all of the posts from the database and display them
+ $app->get('/posts', function () use ($app) {
+     $app->view()->appendData(array('posts' => ORM::for_table('post')->find_many()));
 
- $app->render('posts.mustache');
-});
-
-$app->get('/addPost', function () use ($app) {
- $app->render('addPost.mustache');
-});
-
-$app->post('/addPost', function () use ($app) {
- $req = $app->request();
-
- $title = $req->post('title');
- $post = $req->post('post');
-
- $new_post = ORM::for_table('post')->create();
+     $app->render('posts.mustache');
+ });
  
- $new_post->id = md5 ("$title $post");
- $new_post->title = $title;
- $new_post->post = $post;
- 
- $new_post->save();
+ // Display an individual Post by ID
+ $app->get('/post/:id', function ($id) use ($app) {
+    $app->view()->appendData(array('post' => ORM::for_table('post')->where_equal('id', $id)->find_one()));
+    $app->render('post.mustache');
+ }); 
 
- $app->redirect("/post/$id");
-});
+ // Displays form to add a new Post
+ $app->get('/addPost', function () use ($app) {
+   $app->render('addPost.mustache');
+ });
 
-$app->get('/post/:id', function ($id) use ($app) {
+ // Receives data from new Post and adds it to the database
+ $app->post('/addPost', function () use ($app) {
+   $req = $app->request();
 
- $app->view()->appendData(array('post' => ORM::for_table('post')->where_equal('id', $id)->find_one()));
+   $title = $req->post('title');
+   $post = $req->post('post');
 
- $app->render('post.mustache');
- 
-});
+   $new_post = ORM::for_table('post')->create();
 
-$app->run();
+   $new_post->id = md5 ("$title $post");
+   $new_post->title = $title;
+   $new_post->post = $post;
+
+   $new_post->save();
+
+   $app->redirect("/post/$id");
+ });
+
+ $app->run();
